@@ -1,0 +1,77 @@
+application:
+  configuration:
+    input.server-os: {image: "us-east-1/ami-ba13abd2", identity: "Administrator"}
+    input.server-os-password: "qwerty12!"
+    input.server-instance-size: "m3.medium"
+    input.instance-prefix: "IIS"
+    input.recipe-url: "http://wasilyev.ru/iis.ps1"
+    input.site-name: "test-site.com"
+    input.site-path: "c:\\www"
+    input.pool-name: "test-pool"
+    input.app-name: "test-app"
+    input.delay: "10 minutes"
+  interfaces:
+    input:
+      server-os: "bind(iis#input.server-os)"
+      server-os-password: "bind(iis#input.server-os-password)"
+      server-instance-size: "bind(iis#input.server-instance-size)"
+      instance-prefix: "bind(iis#input.instance-prefix)"
+      recipe-url: "bind(iis#input.recipe-url)"
+      site-name: "bind(iis#input.site-name)"
+      site-path: "bind(iis#input.site-path)"
+      pool-name: "bind(iis#input.pool-name)"
+      app-name: "bind(iis#input.app-name)"
+      delay: "bind(iis#input.delay)"
+    output:
+      IIS-server-ip: "bind(iis#result.iis-server-ip)"
+  components:
+    iis:
+      type: workflow.Instance
+      interfaces:
+        input:
+          server-os:
+            type: configuration(map<string,object>)
+            suggestions:
+              east: {image: "us-east-1/ami-ba13abd2", identity: "Administrator"}
+              west: {image: "us-east-1/ami-df43569a", identity: "Administrator"}
+          server-os-password: configuration(string)
+          server-instance-size: configuration(string)
+          instance-prefix: configuration(string)
+          recipe-url: configuration(string)
+          site-name: configuration(string)
+          site-path: configuration(string)
+          pool-name: configuration(string)
+          app-name: configuration(string)
+          delay: configuration(string)
+        result:
+          iis-server-ip: publish-signal(list<string>)
+      required: []
+      configuration:
+        configuration.workflows:
+          launch:
+            steps:
+              - provision:
+                  action: provisionVms
+                  parameters:
+                    hardwareId: "{$.server-instance-size}"
+                    imageId: "{$.server-os.image}"
+                    vmIdentity: "{$.server-os.identity}"
+                    jcloudsNodeNamePrefix: "{$.instance-prefix}"
+                    targetQuantity: 1
+                    roleName: default
+                    providerSettings:
+                      userData:
+                      |
+                        <powershell>
+                          net user Administrator {$.server-os-password}
+                          Set-ExecutionPolicy Unrestricted -Force
+                          wget "{$.recipe-url}" -OutFile recipe.ps1
+                          & recipe.ps1 -sitePath {$.site-path} -siteName {$.site-name} -appPoolName {$.pool-name} -appName {$.app-name}>recipe.log 2>&1
+                        </powershell>
+                  output:
+                    iis-server-ip: ips
+            return:
+              iis-server-ip:
+                description: Windows Server IP
+                value: "{$.iis-server-ip}"
+
