@@ -4,11 +4,11 @@ application:
     input.server-os-password: "qwerty12!"
     input.server-instance-size: "m3.medium"
     input.instance-prefix: "IIS"
-    input.recipe-url: "http://wasilyev.ru/iis.ps1"
-    input.site-name: "test-site.com"
-    input.site-path: "c:\\www"
+    input.recipe-url: "https://raw.githubusercontent.com/jollyrojer/component-iis/master/iis.ps1"
     input.pool-name: "test-pool"
     input.app-name: "test-app"
+    input.site-name: "test-site.com"
+    input.site-path: "c:\\www"
     input.delay: "10 minutes"
   interfaces:
     input:
@@ -17,10 +17,10 @@ application:
       server-instance-size: "bind(iis#input.server-instance-size)"
       instance-prefix: "bind(iis#input.instance-prefix)"
       recipe-url: "bind(iis#input.recipe-url)"
-      site-name: "bind(iis#input.site-name)"
-      site-path: "bind(iis#input.site-path)"
       pool-name: "bind(iis#input.pool-name)"
       app-name: "bind(iis#input.app-name)"
+      site-name: "bind(iis#input.site-name)"
+      site-path: "bind(iis#input.site-path)"
       delay: "bind(iis#input.delay)"
     output:
       IIS-server-ip: "bind(iis#result.iis-server-ip)"
@@ -38,10 +38,10 @@ application:
           server-instance-size: configuration(string)
           instance-prefix: configuration(string)
           recipe-url: configuration(string)
-          site-name: configuration(string)
-          site-path: configuration(string)
           pool-name: configuration(string)
           app-name: configuration(string)
+          site-name: configuration(string)
+          site-path: configuration(string)
           delay: configuration(string)
         result:
           iis-server-ip: publish-signal(list<string>)
@@ -66,7 +66,7 @@ application:
                           net user Administrator {$.server-os-password}
                           Set-ExecutionPolicy Unrestricted -Force
                           wget "{$.recipe-url}" -OutFile recipe.ps1
-                          & recipe.ps1 -sitePath {$.site-path} -siteName {$.site-name} -appPoolName {$.pool-name} -appName {$.app-name}>recipe.log 2>&1
+                          & recipe.ps1 -sitePath {$.site-path} -siteName {$.site-name} -appPoolName {$.pool-name} -appName {$.app-name} >recipe.log 2>&1
                         </powershell>
                   output:
                     iis-server-ip: ips
@@ -74,4 +74,3 @@ application:
               iis-server-ip:
                 description: Windows Server IP
                 value: "{$.iis-server-ip}"
-
