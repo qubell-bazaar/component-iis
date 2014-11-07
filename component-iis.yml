@@ -59,6 +59,7 @@ application:
                     jcloudsNodeNamePrefix: "{$.instance-prefix}"
                     targetQuantity: 1
                     roleName: default
+                    connectTimeout: 20 minutes
                     providerSettings:
                       userData:
                       |
@@ -67,9 +68,134 @@ application:
                           Set-ExecutionPolicy Unrestricted -Force
                           wget "{$.recipe-url}" -OutFile recipe.ps1
                           & recipe.ps1 -sitePath {$.site-path} -siteName {$.site-name} -appPoolName {$.pool-name} -appName {$.app-name} >recipe.log 2>&1
+                          If (Test-Path "C:\cygwin64\bin\bash.exe") {{
+                          }} Else {{
+                            If ((whoami).tolower().endswith("administrator")) {{
+                              # already an admin
+                            }} else {{
+                              If (Test-Path "C:\pstools\PsExec.exe") {{
+                                  # already installed, skip
+                              }} else {{
+                                  mkdir C:\pstools
+                                  (New-Object System.Net.WebClient).DownloadFile("http://download.sysinternals.com/files/PSTools.zip", "C:\pstools\PSTools.zip")
+                                  [System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem')
+                                  [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\pstools\PSTools.zip", "C:\pstools")
+                              }}
+
+                              $$password = {$.server-os-password}
+
+                              # TODO: this assumes that administrator password will be reset by cloudbase-init later
+                              NET USER ADMINISTRATOR $$password
+
+                              $$arguments = @("-accepteula", "-u", "Administrator", "-p", $$password, "-h")
+                              $$arguments = $$arguments + @("powershell") + $$myInvocation.MyCommand.Definition
+                              Start-Process C:\pstools\psexec.exe -NoNewWindow -ArgumentList $$arguments
+                              exit
+                          }}
+                            (New-Object System.Net.WebClient).DownloadFile("http://cygwin.com/setup-x86_64.exe", "setup-x86_64.exe")
+                            .\setup-x86_64.exe --no-desktop --site ftp://mirrors.kernel.org/sourceware/cygwin/ --quiet-mode --local-package-dir C:\cygwin64\local_packages --packages 'openssh,curl,util-linux,procps,wget' | Out-Null
+                            C:\cygwin64\bin\bash.exe --login -c "cp /usr/bin/ps.exe /usr/bin/ps.exe~; cp /bin/ps.exe /bin/ps.exe~; cp /usr/bin/procps.exe /usr/bin/ps.exe; cp /usr/bin/procps.exe /bin/ps.exe"
+                            C:\cygwin64\bin\bash.exe --login -c "ssh-host-config --yes --user cyg_server --pwd twEntys1x"
+                            netsh advfirewall firewall add rule name="CYGWIN sshd" dir=in action=allow program="C:\cygwin64\usr\sbin\sshd.exe" enable=yes
+                            net start sshd
+                          }}
+                          C:\cygwin64\bin\bash.exe --login -c "mkdir ~/.ssh"
+                          $$drive = (Get-Volume -FileSystemLabel config-2 | % {{ $$_.DriveLetter }})
+                          If (Test-Path "$${{drive}}:\openstack\") {{
+                            C:\cygwin64\bin\bash.exe --login -c "grep ssh-rsa `$$(find `$$(find /cygdrive -maxdepth 2 -name openstack -or -name ec2) -name 'meta?data.json') | sed -re 's/.*(ssh-rsa [a-zA-Z0-9+/=]+).*/\1/' | uniq >> ~/.ssh/authorized_keys"
+                          }} Else {{
+                            C:\cygwin64\bin\bash.exe --login -c "curl --connect-timeout 5 169.254.169.254/latest/meta-data/public-keys/0/openssh-key >> ~/.ssh/authorized_keys"
+                          }}
+
+                          If (Test-Path "C:/opscode/chef/bin/chef-solo") {{
+                            # chef installed, do nothing
+                          }} Else {{
+                            cd C:\
+                            C:\cygwin64\bin\curl.exe -O https://opscode-omnibus-packages.s3.amazonaws.com/windows/2008r2/x86_64/chef-windows-11.16.4-1.windows.msi
+                            Start-Process -FilePath msiexec -ArgumentList /i, "C:\chef-windows-11.16.4-1.windows.msi", /quiet, /qn -Wait
+                            C:/cygwin64/bin/sed -i "s/tar zxvf/C:\/opscode\/chef\/bin\/tar zxvf/" C:/opscode/chef/embedded/lib/ruby/gems/1.9.1/gems/chef-11.16.4-x86-mingw32/lib/chef/application/solo.rb
+                            C:/cygwin64/bin/sed -i "s/status.exitstatus/0/g" C://opscode/chef/embedded/lib/ruby/gems/1.9.1/gems/chef-11.16.4-x86-mingw32/lib/chef/mixin/command.rb                  
+                          }}
+                          C:\cygwin64\bin\bash.exe --login -c "mkdir ~/bin"
+                          C:\cygwin64\bin\bash.exe --login -c "cat > ~/bin/shef <<'EEND'
+                        #!/usr/bin/bash --login
+                        /cygdrive/c/opscode/chef/embedded/bin/ruby.exe C:/opscode/chef/bin/shef `$$*
+                        EEND
+                        chmod +x ~/bin/shef
+                        "
+                          C:\cygwin64\bin\bash.exe --login -c "cat > ~/bin/chef-client <<'EEND'
+                        #!/usr/bin/bash --login
+                        /cygdrive/c/opscode/chef/embedded/bin/ruby.exe C:/opscode/chef/bin/chef-client `$$*
+                        EEND
+                        chmod +x ~/bin/chef-client
+                        "
+
+                          C:\cygwin64\bin\bash.exe --login -c "cat > ~/bin/chef-solo <<'EEND'
+                        #!/usr/bin/bash --login
+                        echo `$$*
+                        CONFIG_PATH=
+                        OTHER_ARGS=
+                        while [ \`"x`$$1\`" != x ]; do
+                          if [ \`"`$$1\`" == -c ]; then
+                            shift;
+                            CONFIG_PATH=\`"`$$1\`"
+                            shift;
+                          elif [ \`"`$$1\`" == -j ]; then
+                            shift;
+                            JSON_PATH=\`"`$$1\`"
+                            shift;
+                          else
+                            OTHER_ARGS=\`"`$$OTHER_ARGS `$$1\`"
+                            shift;
+                          fi
+                        done
+
+                        ROOT_FIX=`$$(cygpath -m `$$HOME)
+                        FILE_CACHE=`$$(grep file_cache_path `$$CONFIG_PATH | awk '{{print `$$2}}' | sed -re 's/\x22(.*)\x22/\1/')
+                        COOKBOOKS=`$$(grep cookbook_path `$$CONFIG_PATH | awk '{{print `$$2}}' | sed -re 's/.*\x22(.*)\x22.*/\1/')
+                        QUBELL_COOKBOOKS=`$$(grep cookbook_path `$$CONFIG_PATH | awk '{{print `$$3}}' | sed -re 's/.*\x22(.*)\x22.*/\1/')
+                        ROLES=`$$(grep role_path `$$CONFIG_PATH | awk '{{print `$$2}}' | sed -re 's/.*\x22(.*)\x22.*/\1/')
+                        DATA_BAGS=`$$(grep data_bag_path `$$CONFIG_PATH | awk '{{print `$$2}}' | sed -re 's/.*\x22(.*)\x22.*/\1/')
+                        NODE_PATH=`$$(grep node_path `$$CONFIG_PATH | awk '{{print `$$2}}' | sed -re 's/.*\x22(.*)\x22.*/\1/')
+                        NODE_NAME=`$$(grep node_name `$$CONFIG_PATH | awk '{{print `$$2}}' | sed -re 's/.*\x22(.*)\x22.*/\1/')
+                        NEW_ROOT=`$$(mktemp -d)
+                        pushd `$$ROOT_FIX
+                        icacls . /save access.txt
+                        icacls `$$(cygpath -m `$$NEW_ROOT) /restore access.txt
+                        popd
+                        cp -r `$$ROOT_FIX/`$$COOKBOOKS `$$NEW_ROOT/cookbooks
+                        cp -r `$$ROOT_FIX/`$$QUBELL_COOKBOOKS `$$NEW_ROOT/qubell_cookbooks
+                        cp -r `$$ROOT_FIX/`$$DATA_BAGS `$$NEW_ROOT/data_bags
+                        cp -r `$$ROOT_FIX/`$$ROLES `$$NEW_ROOT/roles
+                        cd ~
+                        NODE_PATH_FIX=`$$(echo `$$NODE_PATH | cut -c 2-)
+                        mkdir -p `$$NODE_PATH_FIX
+                        chmod 0755 `$$NODE_PATH_FIX
+                        chmod 0755 `$$NODE_PATH_FIX/`$$NODE_NAME.json
+                        chmod 0755 `$$ROOT_FIX/`$$NODE_PATH_FIX
+                        chmod 0755 `$$ROOT_FIX/`$$NODE_PATH_FIX/`$$NODE_NAME.json
+                        
+                        cat `$$CONFIG_PATH | sed -re \`"s|`$$COOKBOOKS|`$$(cygpath -m `$$NEW_ROOT/cookbooks)|;s|`$$QUBELL_COOKBOOKS|`$$(cygpath -m `$$NEW_ROOT/qubell_cookbooks)|;s|`$$DATA_BAGS|`$$(cygpath -m `$$NEW_ROOT/data_bags)|;s|`$$ROLES|`$$(cygpath -m `$$NEW_ROOT/roles)|;s|`$$NODE_PATH|`$$ROOT_FIX/`$$NODE_PATH_FIX|;s|\x22`$$FILE_CACHE\x22|\x22`$$(cygpath -m `$$NEW_ROOT)\x22|;\`" > `$$NEW_ROOT/client.rb
+
+                        /cygdrive/c/opscode/chef/embedded/bin/ruby.exe C:/opscode/chef/bin/chef-solo -c `$$(cygpath -m `$$NEW_ROOT/client.rb) -j `$$JSON_PATH `$$OTHER_ARGS
+                        EEND
+                        chmod +x ~/bin/chef-solo
+                        "
+
+                          C:\cygwin64\bin\bash.exe --login -c "cat > ~/.bashrc <<'EEND'
+                        export LC_ALL=C
+                        export LANG=C
+                        export PATH=~/bin:`$$PATH
+                        EEND
+                        "
                         </powershell>
                   output:
                     iis-server-ip: ips
+              - wait-provision:
+                  action: wait
+                  precedingPhases: [provision]
+                  parameters:
+                    delay: "{$.delay}"
             return:
               iis-server-ip:
                 description: Windows Server IP
