@@ -6,9 +6,6 @@ application:
     input.instance-prefix: "IIS"
     input.recipe-url: "https://dl.dropboxusercontent.com/u/250836/iis.tar.gz"
     input.iis-modules: ["IIS-HealthAndDiagnostics", "IIS-WebServerManagementTools", "IIS-Performance"]
-    input.app-name: "test-app"
-    input.site-name: "test-site.com"
-    input.site-path: "c:\\www"
   interfaces:
     input:
       server-os: "bind(iis#input.server-os)"
@@ -17,9 +14,6 @@ application:
       instance-prefix: "bind(iis#input.instance-prefix)"
       recipe-url: "bind(iis#input.recipe-url)"
       iis-modules: "bind(iis#input.iis-modules)"
-      app-name: "bind(iis#input.app-name)"
-      site-name: "bind(iis#input.site-name)"
-      site-path: "bind(iis#input.site-path)"
     IIS:
       server-ip: "bind(iis#result.iis-server-ip)"
       pool: "bind(iis#actions.pool-management)"
@@ -39,10 +33,6 @@ application:
           instance-prefix: configuration(string)
           recipe-url: configuration(string)
           iis-modules: configuration(list<string>)
-          pool-name: configuration(string)
-          app-name: configuration(string)
-          site-name: configuration(string)
-          site-path: configuration(string)
         actions:
           pool-management:
             type: receive-command(string pool-name, object pool-properties, string pool-action)
@@ -276,7 +266,7 @@ application:
           
           site-management:
             parameters:
-              - site_name:
+              - site-name:
                   description: Site name
               - site-properties:
                   description: Site properties (object)
