@@ -35,10 +35,10 @@ application:
           iis-modules: configuration(list<string>)
         actions:
           pool-management:
-            type: receive-command(string pool-name, object pool-properties, string pool-action)
+            type: receive-command(string pool-name, object pool-properties)
             name: Manage Applications Pool
           site-management:
-            type: receive-command(string site-name, object site-properties, list<string> site-action)
+            type: receive-command(string site-name, object site-properties)
             name: Manage Site
         result:
           iis-server-ip: publish-signal(list<string>)
@@ -241,8 +241,6 @@ application:
                   description: Pool name
               - pool-properties:
                   description: Set properties (object)
-              - pool-action:
-                  description: Awailable actions add, config, delete, start, stop, restart, recycle
             steps:
               - manage-pool:
                   action: "chefsolo"
@@ -253,16 +251,8 @@ application:
                     roles: [default]
                     jattrs:
                       cookbook_qubell_iis:
-                        pool:
-                          pool_name: "{$.pool-name}"
-                          runtime_version: "{$.runtime-version}"
-                          worker_idle_timeout: "{$.worker-idle-timeout}"
-                          private_mem: "{$.private-mem}"
-                          max_proc: "{$.max-proc}"
-                          thirty_two_bit: "{$.thirty-two-bit}"
-                          pool_username: "{$.pool-username}"
-                          pool_password: "{$.pool-password}"
-                          action: "{$.action}"
+                        pool_name: "{$.pool-name}"
+                        pool: "{$.pool-properties}"
           
           site-management:
             parameters:
@@ -270,8 +260,6 @@ application:
                   description: Site name
               - site-properties:
                   description: Site properties (object)
-              - site-action:
-                  description: Site action (add, config, delete, start, stop, restart)
             steps:
               - manage-site:
                   action: "chefsolo"
@@ -282,14 +270,6 @@ application:
                     roles: [default]
                     jattrs:
                       cookbook_qubell_iis:
-                        site:
-                          product_id: "{$.product-id}"
-                          site_name: "{$.site-name}"
-                          site_id: "{$.site-id}"
-                          path: "{$.site-path}"
-                          protocol: "{$.site-protocol}"
-                          port: "{$.site-port}"
-                          host_header: "{$.host-header}"
-                          options: "{$.site-options}"
-                          bindings: "{$.site-bindings}"
-                          application_pool: "{$.application-pool}"
+                        site_name: "{$.site-name}"
+                        site: "{$.site-properties}"
+                          
