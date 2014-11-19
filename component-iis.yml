@@ -18,6 +18,7 @@ application:
       server-ip: "bind(iis#result.iis-server-ip)"
       pool: "bind(iis#actions.pool-management)"
       site: "bind(iis#actions.site-management)"
+      app: "bind(iis#actions.app-management)"
   components:
     iis:
       type: workflow.Instance
@@ -40,6 +41,9 @@ application:
           site-management:
             type: receive-command(string site-name, object site-properties)
             name: Manage Site
+          app-management:
+            type: receive-command(string app-name, string site-name, object app-properties)
+            name: Manage Application
         result:
           iis-server-ip: publish-signal(list<string>)
       required: []
@@ -272,4 +276,25 @@ application:
                       cookbook_qubell_iis:
                         site_name: "{$.site-name}"
                         site: "{$.site-properties}"
-                          
+          
+          app-management:
+            parameters:
+              - app-name:
+                  description: IIS Application name
+              - site-name:
+                  description: IIS Site name
+              - app-properties:
+                  description: Application properties (object)
+            steps:
+              - manage-app:
+                  action: "chefsolo"
+                  parameters:
+                    isSudo: false
+                    recipeUrl: "{$.recipe-url}"
+                    runList: ["recipe[cookbook_qubell_iis::app_management]"]
+                    roles: [default]
+                    jattrs:
+                      cookbook_qubell_iis:
+                        app_name: "{$.site-name}"
+                        virtual_path: "/{$.app-name}"
+                        app: "{$.app-properties}"
