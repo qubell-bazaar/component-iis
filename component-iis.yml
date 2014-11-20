@@ -295,6 +295,6 @@ application:
                     roles: [default]
                     jattrs:
                       cookbook_qubell_iis:
-                        app_name: "{$.site-name}"
-                        virtual_path: "/{$.app-name}"
+                        site_name: "{$.site-name}"
+                        application_name: "/{$.app-name}"
                         app: "{$.app-properties}"
