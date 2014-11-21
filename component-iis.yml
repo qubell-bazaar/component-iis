@@ -4,8 +4,8 @@ application:
     input.server-os-password: "qwerty12!"
     input.server-instance-size: "m3.medium"
     input.instance-prefix: "IIS"
-    input.recipe-url: "https://dl.dropboxusercontent.com/u/250836/iis.tar.gz"
-    input.iis-modules: ["IIS-HealthAndDiagnostics", "IIS-WebServerManagementTools", "IIS-Performance"]
+    input.recipe-url: "https://s3.amazonaws.com/qubell-starter-kit-artifacts/qubell-bazaar/component-iis-cookbooks-stable-16aaba4.tar.gz"
+    input.iis-modules: ["IIS-HealthAndDiagnostics", "IIS-WebServerManagementTools", "IIS-Performance", "IIS-StaticContent"]
   interfaces:
     input:
       server-os: "bind(iis#input.server-os)"
