@@ -4,7 +4,7 @@ application:
     input.server-os-password: "qwerty12!"
     input.server-instance-size: "m3.medium"
     input.instance-prefix: "IIS"
-    input.recipe-url: "https://s3.amazonaws.com/qubell-starter-kit-artifacts/qubell-bazaar/component-iis-cookbooks-stable-16aaba4.tar.gz"
+    input.recipe-url: "https://dl.dropboxusercontent.com/u/250836/iis.tar.gz"
     input.iis-modules: ["IIS-HealthAndDiagnostics", "IIS-WebServerManagementTools", "IIS-Performance", "IIS-StaticContent"]
   interfaces:
     input:
@@ -16,6 +16,7 @@ application:
       iis-modules: "bind(iis#input.iis-modules)"
     IIS:
       server-ip: "bind(iis#result.iis-server-ip)"
+      server-dns: "bind(iis#result.iis-server-dns)"
       pool: "bind(iis#actions.pool-management)"
       site: "bind(iis#actions.site-management)"
       app: "bind(iis#actions.app-management)"
@@ -46,6 +47,7 @@ application:
             name: Manage Application
         result:
           iis-server-ip: publish-signal(list<string>)
+          iis-server-dns: publish-signal(list<string>)
       required: []
       configuration:
         configuration.workflows:
@@ -215,7 +217,6 @@ application:
                           </powershell>
                   output:
                     iis-server-ip: ips
-
               - change-admin-password:
                   action: execrun
                   precedingPhases: [provision]
@@ -223,6 +224,17 @@ application:
                     roles: [default]
                     command:
                       - "NET USER ADMINISTRATOR {$.server-os-password}"
+              - get-hostname:
+                  action: execrun
+                  precedingPhases: [provision]
+                  parameters:
+                    roles: [ default ]
+                    isSudo: true
+                    command:
+                      - curl -s http://169.254.169.254/latest/meta-data/public-hostname
+                  output:
+                    iis-server-dns: stdout
+              
               - install-iis:
                   action: chefsolo
                   precedingPhases: [change-admin-password]
@@ -238,6 +250,9 @@ application:
               iis-server-ip:
                 description: Windows Server IP
                 value: "{$.iis-server-ip}"
+              iis-server-dns:
+                description: Windows Server public DNS name
+                value: "{$.iis-server-dns}"
           
           pool-management:
             parameters:
