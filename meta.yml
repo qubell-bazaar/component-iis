@@ -1,0 +1,15 @@
+kit:
+  name: "MS IIS Server"
+  link: https://github.com/qubell-bazaar/component-iis 
+  applications:
+    - name: "Application Server"
+      manifest: https://raw.github.com/qubell-bazaar/component-iis/1.0-35p/component-iis.yml
+  provider:
+    name: "Qubell"
+    link: http://qubell.com
+  documentation:
+    overview: |
+      This application requires the following items to be configured in your environment:
+        * Amazon EC2 or Rackspace CloudServers account;
+        * Port 22, 3389, 80 open on the ﬁrewall.
+      Please refer to the Getting Started for step-by-step instructions on how to configure your environment.
