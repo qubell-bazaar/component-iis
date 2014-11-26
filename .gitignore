@@ -21,9 +21,9 @@ Berksfile.lock
 Gemfile.lock
 bin/*
 .bundle/*
-
 .kitchen/
 .kitchen.local.yml
-
 berks/
 component-iis.yml.bak
+.lime-env/
+report.xml
