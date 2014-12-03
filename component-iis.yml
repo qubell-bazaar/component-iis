@@ -97,7 +97,7 @@ application:
 
                                     (New-Object System.Net.WebClient).DownloadFile("http://cygwin.com/setup-x86_64.exe", "setup-x86_64.exe")
 
-                                    .\setup-x86_64.exe --no-desktop --site http://mirrors.syringanetworks.net/cygwin/ --quiet-mode --local-package-dir C:\cygwin64\local_packages --packages 'openssh,curl,util-linux,procps,wget' | Out-Host
+                                    .\setup-x86_64.exe --no-desktop --site http://mirrors.syringanetworks.net/cygwin/ --quiet-mode --local-package-dir C:\cygwin64\local_packages --packages 'openssh,curl,util-linux,procps,wget,unzip' | Out-Host
 
                                     C:\cygwin64\bin\bash.exe --login -c "cp /usr/bin/ps.exe /usr/bin/ps.exe~; cp /bin/ps.exe /bin/ps.exe~; cp /usr/bin/procps.exe /usr/bin/ps.exe; cp /usr/bin/procps.exe /bin/ps.exe"
 
