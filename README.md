@@ -5,7 +5,7 @@ MS IIS Server
 
 Installs and configures MS IIS8 Server
 
-[![Install](https://raw.github.com/qubell-bazaar/component-skeleton/master/img/install.png)](https://express.qubell.com/applications/upload?metadataUrl=https://raw.github.com/qubell-bazaar/component-iis/1.0-35p/meta.yml)
+[![Install](https://raw.github.com/qubell-bazaar/component-skeleton/master/img/install.png)](https://express.qubell.com/applications/upload?metadataUrl=https://raw.github.com/qubell-bazaar/component-iis/1.1-35p/meta.yml)
 ------------------------------------------------
 
 Features
