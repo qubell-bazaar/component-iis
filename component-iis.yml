@@ -6,7 +6,7 @@ application:
     input.instance-prefix: "IIS"
     input.mirror: "http://adp-repo.s3-website-us-east-1.amazonaws.com/cygwin"
     input.packages: "openssh,curl,util-linux,procps,wget,unzip"
-    input.recipe-url: "https://s3.amazonaws.com/qubell-starter-kit-artifacts/qubell-bazaar/component-iis-cookbooks-stable-ea5e9e8.tar.gz"
+    input.recipe-url: "https://s3.amazonaws.com/qubell-starter-kit-artifacts/qubell-bazaar/component-iis-cookbooks-stable-c6c7f4f.tar.gz"
     input.iis-modules: ["IIS-HealthAndDiagnostics", "IIS-WebServerManagementTools", "IIS-Performance", "IIS-StaticContent", "IIS-ASPNET", "IIS-ASPNET45", "IIS-ASP"]
   interfaces:
     input:
@@ -73,7 +73,6 @@ application:
                       userData:
                         |
                           <powershell>
-
                               If (Test-Path "C:\cygwin64\bin\bash.exe") {{
 
                               }} Else {{
@@ -275,6 +274,7 @@ application:
                     recipeUrl: "{$.recipe-url}"
                     runList: [ "recipe[cookbook_qubell_iis]" ]
                     roles: [default]
+                    version: 11.16.4-1
                     jattrs:
                       iis:
                         components: "{$.iis-modules}"
@@ -300,6 +300,7 @@ application:
                     recipeUrl: "{$.recipe-url}"
                     runList: ["recipe[cookbook_qubell_iis::pool_management]"]
                     roles: [default]
+                    version: 11.16.4-1
                     jattrs:
                       cookbook_qubell_iis:
                         pool_name: "{$.pool-name}"
@@ -319,6 +320,7 @@ application:
                     recipeUrl: "{$.recipe-url}"
                     runList: ["recipe[cookbook_qubell_iis::site_management]"]
                     roles: [default]
+                    version: 11.16.4-1
                     jattrs:
                       cookbook_qubell_iis:
                         site_name: "{$.site-name}"
@@ -340,6 +342,7 @@ application:
                     recipeUrl: "{$.recipe-url}"
                     runList: ["recipe[cookbook_qubell_iis::app_management]"]
                     roles: [default]
+                    version: 11.16.4-1
                     jattrs:
                       cookbook_qubell_iis:
                         site_name: "{$.site-name}"
