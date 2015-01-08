@@ -4,14 +4,18 @@ application:
     input.server-os-password: "qwerty12!"
     input.server-instance-size: "m3.medium"
     input.instance-prefix: "IIS"
-    input.recipe-url: "https://s3.amazonaws.com/qubell-starter-kit-artifacts/qubell-bazaar/component-iis-cookbooks-stable-ea5e9e8.tar.gz"
-    input.iis-modules: ["IIS-HealthAndDiagnostics", "IIS-WebServerManagementTools", "IIS-Performance", "IIS-StaticContent"]
+    input.mirror: "http://adp-repo.s3-website-us-east-1.amazonaws.com/cygwin"
+    input.packages: "openssh,curl,util-linux,procps,wget,unzip"
+    input.recipe-url: "https://s3.amazonaws.com/qubell-starter-kit-artifacts/qubell-bazaar/component-iis-cookbooks-stable-c6c7f4f.tar.gz"
+    input.iis-modules: ["IIS-HealthAndDiagnostics", "IIS-WebServerManagementTools", "IIS-Performance", "IIS-StaticContent", "IIS-ASPNET", "IIS-ASPNET45", "IIS-ASP"]
   interfaces:
     input:
       server-os: "bind(iis#input.server-os)"
       server-os-password: "bind(iis#input.server-os-password)"
       server-instance-size: "bind(iis#input.server-instance-size)"
       instance-prefix: "bind(iis#input.instance-prefix)"
+      mirror: "bind(iis#input.mirror)"
+      packages: "bind(iis#input.packages)"
       recipe-url: "bind(iis#input.recipe-url)"
       iis-modules: "bind(iis#input.iis-modules)"
     IIS:
@@ -33,6 +37,8 @@ application:
           server-os-password: configuration(string)
           server-instance-size: configuration(string)
           instance-prefix: configuration(string)
+          mirror: configuration(string)
+          packages: configuration(string)
           recipe-url: configuration(string)
           iis-modules: configuration(list<string>)
         actions:
@@ -67,7 +73,6 @@ application:
                       userData:
                         |
                           <powershell>
-
                               If (Test-Path "C:\cygwin64\bin\bash.exe") {{
 
                               }} Else {{
@@ -97,11 +102,23 @@ application:
 
                                     (New-Object System.Net.WebClient).DownloadFile("http://cygwin.com/setup-x86_64.exe", "setup-x86_64.exe")
 
-                                    .\setup-x86_64.exe --no-desktop --site http://mirrors.syringanetworks.net/cygwin/ --quiet-mode --local-package-dir C:\cygwin64\local_packages --packages 'openssh,curl,util-linux,procps,wget,unzip' | Out-Host
+                                    .\setup-x86_64.exe --no-desktop --site '{$.mirror}' --quiet-mode --local-package-dir C:\cygwin64\local_packages --packages '{$.packages}' | Out-Null
 
                                     C:\cygwin64\bin\bash.exe --login -c "cp /usr/bin/ps.exe /usr/bin/ps.exe~; cp /bin/ps.exe /bin/ps.exe~; cp /usr/bin/procps.exe /usr/bin/ps.exe; cp /usr/bin/procps.exe /bin/ps.exe"
 
-                                    C:\cygwin64\bin\bash.exe --login -c "ssh-host-config --yes --user cyg_server --pwd twEntys1x"
+                                    # nearly 13.12.14 ssh-host-config bug was introduced in cygwin
+                                    # 1. root and Administrators groups are duplicated in /etc/group after installation
+                                    # 2. first ssh-host-config run fails because created cyg_server missing in /etc/passwd
+                                    # 3. sshd windows service has wrong user because of #2
+                                    Add-Type -Assembly System.Web
+                                    $$cyg_server_password_length = 15
+                                    $$cyg_server_password_non_alphanum = 5
+                                    $$cyg_server_password = [System.Web.Security.Membership]::GeneratePassword($$cyg_server_password_length, $$cyg_server_password_non_alphanum)
+                                    C:\cygwin64\bin\bash.exe --login -c "mkgroup > /etc/group"
+                                    C:\cygwin64\bin\bash.exe --login -c "ssh-host-config --yes --user cyg_server --pwd '$$cyg_server_password'"
+                                    C:\cygwin64\bin\bash.exe --login -c "mkpasswd > /etc/passwd"
+                                    C:\cygwin64\bin\bash.exe --login -c "cygrunsrv -R sshd"
+                                    C:\cygwin64\bin\bash.exe --login -c "ssh-host-config --yes --user cyg_server --pwd '$$cyg_server_password'"
 
                                     # sshd 6.7 is too restrictive, reverting to 6.6 defaults
                                     C:\cygwin64\bin\bash.exe --login -c "echo Ciphers aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128,aes128-cbc,3des-cbc,blowfish-cbc,cast128-cbc,aes192-cbc,aes256-cbc,arcfour >> /etc/sshd_config"
@@ -111,11 +128,22 @@ application:
                                     netsh advfirewall firewall add rule name="CYGWIN sshd" dir=in action=allow program="C:\cygwin64\usr\sbin\sshd.exe" enable=yes
                               }}
 
-                              If (Test-Path "C:/opscode/chef/bin/chef-solo") {{
-                                  # chef installed, do nothing
+                              C:\cygwin64\bin\bash.exe --login -c "mkdir -p ~/.undeploy.me"
+
+                              echo @'
+                              param(
+                              [string]$$chef_build = "10"  # 10.32.2-3 and 11.16.4-1 currently supported
+                              )
+                              # detect platform default and use ours
+                              if ($$chef_build -eq "10" -or $$chef_build -eq "10.16.2") {{
+                                  $$chef_build = "10.32.2-3"
+                              }} elseif ($$chef_build -eq "11") {{
+                                  $$chef_build = "11.16.4-1"
+                              }}
+                              If ((Test-Path "C:/opscode/chef/bin/chef-solo") -or ($$chefVersion -eq "")) {{
+                                  Write-Host "Chef already installed or chef build not specified, skipping installation..."
                               }} Else {{
                                   cd C:\
-                                  $$chef_build = "11.16.4-1"  # also 11.16.4-1 supported
                                   $$chef_version = $$chef_build.Split("-")[0]
                                   $$chef_major_version = $$chef_build.Split(".")[0]
                                   C:\cygwin64\bin\curl.exe -O "https://opscode-omnibus-packages.s3.amazonaws.com/windows/2008r2/x86_64/chef-windows-$${{chef_build}}.windows.msi"
@@ -126,25 +154,24 @@ application:
                                       # fix chef bug
                                       C:/cygwin64/bin/sed -i "s/status.exitstatus/0/g"                   C:/opscode/chef/embedded/lib/ruby/gems/1.9.1/gems/chef-$${{chef_version}}-x86-mingw32/lib/chef/mixin/command.rb
                                   }}
-                              }}
 
-                              C:\cygwin64\bin\bash.exe --login -c "mkdir ~/bin"
+                                  C:\cygwin64\bin\bash.exe --login -c "mkdir ~/bin"
 
-                              C:\cygwin64\bin\bash.exe --login -c "cat > ~/bin/shef <<'EEND'
+                                  C:\cygwin64\bin\bash.exe --login -c "cat > ~/bin/shef <<'EEND'
                           #!/usr/bin/bash --login
                           /cygdrive/c/opscode/chef/embedded/bin/ruby.exe C:/opscode/chef/bin/shef `$$*
                           EEND
                           chmod +x ~/bin/shef
                           "
 
-                              C:\cygwin64\bin\bash.exe --login -c "cat > ~/bin/chef-client <<'EEND'
+                                  C:\cygwin64\bin\bash.exe --login -c "cat > ~/bin/chef-client <<'EEND'
                           #!/usr/bin/bash --login
                           /cygdrive/c/opscode/chef/embedded/bin/ruby.exe C:/opscode/chef/bin/chef-client `$$*
                           EEND
                           chmod +x ~/bin/chef-client
                           "
 
-                              C:\cygwin64\bin\bash.exe --login -c "cat > ~/bin/chef-solo <<'EEND'
+                                  C:\cygwin64\bin\bash.exe --login -c "cat > ~/bin/chef-solo <<'EEND'
                           #!/usr/bin/bash --login
 
                           CONFIG_PATH=
@@ -198,12 +225,16 @@ application:
                           chmod +x ~/bin/chef-solo
                           "
 
-                              C:\cygwin64\bin\bash.exe --login -c "cat > ~/.bashrc <<'EEND'
+                                  C:\cygwin64\bin\bash.exe --login -c "cat > ~/.bashrc <<'EEND'
                           export LC_ALL=C
                           export LANG=C
                           export PATH=~/bin:`$$PATH
                           EEND
                           "
+
+                              }}
+
+                          '@ | Out-File $$(C:\cygwin64\bin\bash.exe --login -c "cygpath -w ~/.undeploy.me/chef-install.ps1")
 
                               C:\cygwin64\bin\bash.exe --login -c "mkdir ~/.ssh"
                               $$drive = (Get-Volume -FileSystemLabel config-2 | % {{ $$_.DriveLetter }})
@@ -243,6 +274,7 @@ application:
                     recipeUrl: "{$.recipe-url}"
                     runList: [ "recipe[cookbook_qubell_iis]" ]
                     roles: [default]
+                    version: 11.16.4-1
                     jattrs:
                       iis:
                         components: "{$.iis-modules}"
@@ -268,6 +300,7 @@ application:
                     recipeUrl: "{$.recipe-url}"
                     runList: ["recipe[cookbook_qubell_iis::pool_management]"]
                     roles: [default]
+                    version: 11.16.4-1
                     jattrs:
                       cookbook_qubell_iis:
                         pool_name: "{$.pool-name}"
@@ -287,6 +320,7 @@ application:
                     recipeUrl: "{$.recipe-url}"
                     runList: ["recipe[cookbook_qubell_iis::site_management]"]
                     roles: [default]
+                    version: 11.16.4-1
                     jattrs:
                       cookbook_qubell_iis:
                         site_name: "{$.site-name}"
@@ -308,6 +342,7 @@ application:
                     recipeUrl: "{$.recipe-url}"
                     runList: ["recipe[cookbook_qubell_iis::app_management]"]
                     roles: [default]
+                    version: 11.16.4-1
                     jattrs:
                       cookbook_qubell_iis:
                         site_name: "{$.site-name}"
