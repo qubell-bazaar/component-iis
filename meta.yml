@@ -3,7 +3,7 @@ kit:
   link: https://github.com/qubell-bazaar/component-iis 
   applications:
     - name: "Application Server"
-      manifest: https://raw.github.com/qubell-bazaar/component-iis/1.1-35p/component-iis.yml
+      manifest: https://raw.github.com/qubell-bazaar/component-iis/2.0-36p/component-iis.yml
   provider:
     name: "Qubell"
     link: http://qubell.com

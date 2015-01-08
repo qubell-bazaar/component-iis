@@ -6,7 +6,7 @@ application:
     input.instance-prefix: "IIS"
     input.mirror: "http://adp-repo.s3-website-us-east-1.amazonaws.com/cygwin"
     input.packages: "openssh,curl,util-linux,procps,wget,unzip"
-    input.recipe-url: "https://s3.amazonaws.com/qubell-starter-kit-artifacts/qubell-bazaar/component-iis-cookbooks-stable-c6c7f4f.tar.gz"
+    input.recipe-url: "https://s3.amazonaws.com/qubell-starter-kit-artifacts/qubell-bazaar/component-iis-cookbooks-stable-9162a23.tar.gz"
     input.iis-modules: ["IIS-HealthAndDiagnostics", "IIS-WebServerManagementTools", "IIS-Performance", "IIS-StaticContent", "IIS-ASPNET", "IIS-ASPNET45", "IIS-ASP"]
   interfaces:
     input:
