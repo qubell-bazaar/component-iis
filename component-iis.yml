@@ -2,7 +2,7 @@ application:
   configuration:
     input.server-os: {image: "us-east-1/ami-c49c0dac", identity: "Administrator"}
     input.server-os-password: "qwerty12!"
-    input.server-instance-size: "m3.medium"
+    input.server-instance-size: "m3.large"
     input.instance-prefix: "IIS"
     input.mirror: "http://adp-repo.s3-website-us-east-1.amazonaws.com/cygwin"
     input.packages: "openssh,curl,util-linux,procps,wget,unzip"
